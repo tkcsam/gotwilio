@@ -122,6 +122,20 @@ type ListVideoRoomOptions struct {
 	UniqueName        string      `json:"EnableUniqueNameTurn"`
 }
 
+func (twilio *Twilio) DefaultRoomOptions() *createRoomOptions {
+	return &createRoomOptions{
+		EnableTurn:                  false, //Deprecated
+		MaxParticipants:             10,
+		MediaRegion:                 USEastCoast,
+		RecordParticipantsOnConnect: false,
+		StatusCallback:              "",
+		StatusCallbackMethod:        http.MethodPost,
+		Type:                        Group,
+		UniqueName:                  "",
+		VideoCodecs:                 []VideoCodecs{H264},
+	}
+}
+
 // CreateVideoRoom creates a video communication session
 // for participants to connect to.
 // See https://www.twilio.com/docs/video/api/rooms-resource
