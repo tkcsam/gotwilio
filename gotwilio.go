@@ -2,8 +2,11 @@
 package gotwilio
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 )
@@ -11,6 +14,7 @@ import (
 const (
 	baseURL       = "https://api.twilio.com/2010-04-01"
 	videoURL      = "https://video.twilio.com"
+	lookupURL     = "https://lookups.twilio.com/v1" // https://www.twilio.com/docs/lookup/api
 	clientTimeout = time.Second * 30
 )
 
@@ -26,6 +30,7 @@ type Twilio struct {
 	AuthToken  string
 	BaseUrl    string
 	VideoUrl   string
+	LookupURL  string
 	HTTPClient *http.Client
 
 	APIKeySid    string
@@ -34,10 +39,22 @@ type Twilio struct {
 
 // Exception is a representation of a twilio exception.
 type Exception struct {
-	Status   int    `json:"status"`    // HTTP specific error code
-	Message  string `json:"message"`   // HTTP error message
-	Code     int    `json:"code"`      // Twilio specific error code
-	MoreInfo string `json:"more_info"` // Additional info from Twilio
+	Status   int           `json:"status"`    // HTTP specific error code
+	Message  string        `json:"message"`   // HTTP error message
+	Code     ExceptionCode `json:"code"`      // Twilio specific error code
+	MoreInfo string        `json:"more_info"` // Additional info from Twilio
+}
+
+// Print the RESTException in a human-readable form.
+func (r Exception) Error() string {
+	var errorCode ExceptionCode
+	var status int
+	if r.Code != errorCode {
+		return fmt.Sprintf("Code %d: %s", r.Code, r.Message)
+	} else if r.Status != status {
+		return fmt.Sprintf("Status %d: %s", r.Status, r.Message)
+	}
+	return r.Message
 }
 
 // Create a new Twilio struct.
@@ -56,6 +73,7 @@ func NewTwilioClientCustomHTTP(accountSid, authToken string, HTTPClient *http.Cl
 		AuthToken:  authToken,
 		BaseUrl:    baseURL,
 		VideoUrl:   videoURL,
+		LookupURL:  lookupURL,
 		HTTPClient: HTTPClient,
 	}
 }
@@ -64,6 +82,25 @@ func (twilio *Twilio) WithAPIKey(apiKeySid string, apiKeySecret string) *Twilio 
 	twilio.APIKeySid = apiKeySid
 	twilio.APIKeySecret = apiKeySecret
 	return twilio
+}
+
+func (twilio *Twilio) getJSON(url string, result interface{}) error {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.SetBasicAuth(twilio.getBasicAuthCredentials())
+	resp, err := twilio.do(req)
+	if err != nil {
+		return fmt.Errorf("failed to submit HTTP request: %v", err)
+	}
+
+	if resp.StatusCode != 200 {
+		re := Exception{}
+		json.NewDecoder(resp.Body).Decode(&re)
+		return re
+	}
+	return json.NewDecoder(resp.Body).Decode(&result)
 }
 
 func (twilio *Twilio) getBasicAuthCredentials() (string, string) {
@@ -112,4 +149,9 @@ func (twilio *Twilio) do(req *http.Request) (*http.Response, error) {
 	}
 
 	return client.Do(req)
+}
+
+// Build path to a resource within the Twilio account
+func (twilio *Twilio) buildUrl(resourcePath string) string {
+	return twilio.BaseUrl + "/" + path.Join("Accounts", twilio.AccountSid, resourcePath)
 }
