@@ -78,5 +78,5 @@ To install gotwilio, simply run `go get github.com/sfreiberg/gotwilio`.
 		authToken := "ABC123..........ABC123"
 		twilio := gotwilio.NewTwilioClient(accountSid, authToken)
 
-		twilio.CreateVideoRoom(gotwilio.DefaultVideoRoomOptions)
+		twilio.CreateVideoRoom(twilio.DefaultRoomOptions())
 	}
