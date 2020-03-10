@@ -132,7 +132,7 @@ func (twilio *Twilio) DefaultRoomOptions() *createRoomOptions {
 		StatusCallbackMethod:        http.MethodPost,
 		Type:                        Group,
 		UniqueName:                  "",
-		VideoCodecs:                 []VideoCodecs{H264},
+		VideoCodecs:                 []VideoCodecs{VP8},
 	}
 }
 
