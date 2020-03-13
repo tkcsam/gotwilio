@@ -3,6 +3,7 @@ package gotwilio
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -53,6 +54,10 @@ const (
 	H264 VideoCodecs = "H264"
 )
 
+type CompositionFile struct {
+	Url string `json:"redirect_to"`
+}
+
 // ListVideoResponse is returned when listing rooms
 type ListVideoReponse struct {
 	Rooms []*VideoResponse `json:"rooms"`
@@ -85,6 +90,13 @@ type VideoResponse struct {
 	Type                        VideoRoomType `json:"type"`
 	UniqueName                  string        `json:"unique_name"`
 	URL                         string        `json:"url"`
+}
+
+type VideoComposition struct {
+	AccountSid  string      `json:"account_sid"`
+	DateCreated time.Time   `json:"date_created"`
+	Sid         string      `json:"sid"`
+	Status      VideoStatus `json:"status"`
 }
 
 type createRoomOptions struct {
@@ -120,6 +132,18 @@ type ListVideoRoomOptions struct {
 	DateCreatedBefore time.Time   `json:"DateCreatedBefore"`
 	Status            VideoStatus `json:"Status"`
 	UniqueName        string      `json:"EnableUniqueNameTurn"`
+}
+
+type VideoCompositionOptions struct {
+	RoomSID              string `json:"RoomSid"`
+	StatusCallback       string `json:"StatusCallback"`
+	StatusCallbackMethod string `json:"StatusCallbackMethod"`
+	Format               string `json:"Format"`
+}
+
+type VideoCompositionResponse struct {
+	Id  string `json:"sid"`
+	Url string `json:"url"`
 }
 
 func (twilio *Twilio) DefaultRoomOptions() *createRoomOptions {
@@ -167,6 +191,112 @@ func (twilio *Twilio) CreateVideoRoom(options *createRoomOptions) (videoResponse
 	videoResponse = new(VideoResponse)
 	err = json.Unmarshal(responseBody, videoResponse)
 	return videoResponse, exception, err
+}
+
+func (twilio *Twilio) GetComposition(sid string) (*VideoComposition, *Exception, error) {
+	twilioUrl := twilio.VideoUrl + fmt.Sprintf("/v1/Compositions/%v", sid)
+
+	res, err := twilio.get(twilioUrl)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer res.Body.Close()
+
+	responseBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		exception := new(Exception)
+		err = json.Unmarshal(responseBody, exception)
+
+		// We aren't checking the error because we don't actually care.
+		// It's going to be passed to the client either way.
+		return nil, exception, err
+	}
+
+	videoResponse := new(VideoComposition)
+	err = json.Unmarshal(responseBody, videoResponse)
+	return videoResponse, nil, err
+}
+
+func (twilio *Twilio) GetCompositionMediaFile(sid string) (io.ReadCloser, error) {
+	twilioUrl := twilio.VideoUrl + fmt.Sprintf("/v1/Compositions/%v/Media?Ttl=60", sid)
+
+	res, err := twilio.get(twilioUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Body, nil
+}
+
+func (twilio *Twilio) DeleteComposition(sid string) (ex *Exception, err error) {
+	twilioUrl := twilio.VideoUrl + fmt.Sprintf("/v1/Compositions/%v", sid)
+
+	res, err := twilio.delete(twilioUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusNoContent {
+		responseBody, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		ex = new(Exception)
+		err = json.Unmarshal(responseBody, ex)
+		if err != nil {
+			return nil, err
+		}
+
+		return ex, err
+	}
+
+	return nil, nil
+}
+
+func (twilio *Twilio) CreateVideoRoomComposition(options *VideoCompositionOptions) (resp *VideoCompositionResponse, exception *Exception, err error) {
+	twilioUrl := twilio.VideoUrl + "/v1/Compositions"
+
+	formValues := url.Values{}
+	formValues.Set("RoomSid", fmt.Sprintf("%s", options.RoomSID))
+	formValues.Set("AudioSources", "*")
+	formValues.Set("StatusCallback", fmt.Sprintf("%s", options.StatusCallback))
+	formValues.Set("StatusCallbackMethod", fmt.Sprintf("%s", options.StatusCallbackMethod))
+	formValues.Set("Format", "mp4")
+	formValues.Set("VideoLayout", `{
+      "grid":{
+        "video_sources":["*"]
+      }
+    }`)
+
+	res, err := twilio.post(formValues, twilioUrl)
+	if err != nil {
+		return nil, exception, err
+	}
+
+	defer res.Body.Close()
+
+	responseBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, exception, err
+	}
+
+	if res.StatusCode != http.StatusCreated {
+		exception = new(Exception)
+		err = json.Unmarshal(responseBody, exception)
+		return nil, exception, err
+	}
+
+	resp = new(VideoCompositionResponse)
+	err = json.Unmarshal(responseBody, resp)
+	return resp, exception, err
 }
 
 // DateCreatedAfter  time.Time   `json:"DateCreatedAfter"`
