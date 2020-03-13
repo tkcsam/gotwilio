@@ -43,6 +43,7 @@ type VideoRoomType string
 const (
 	PeerToPeer VideoRoomType = "peer-to-peer"
 	Group      VideoRoomType = "group"
+	GroupSmall      VideoRoomType = "group-small"
 )
 
 // VideoCodecs are the supported codecs when
