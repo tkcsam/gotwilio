@@ -42,8 +42,7 @@ type VideoRoomType string
 
 const (
 	PeerToPeer VideoRoomType = "peer-to-peer"
-	Group      VideoRoomType = "group"
-	GroupSmall      VideoRoomType = "group-small"
+	GroupSmall VideoRoomType = "group-small"
 )
 
 // VideoCodecs are the supported codecs when
@@ -71,6 +70,18 @@ type ListVideoReponse struct {
 		Url             string `json:"url"`
 		Key             string `json:"key"`
 	} `json:"meta"`
+}
+
+type VideoRecording struct {
+	AccountSid string `json:"account_sid"`
+	Status     string `json:"status"`
+	Sid        string `json:"sid"`
+	Url        string `json:"url"`
+	Type       string `json:"type"`
+}
+
+type GetVideoRecordingsByRoom struct {
+	Recordings []VideoRecording
 }
 
 // VideoResponse is returned for a single room
@@ -121,7 +132,7 @@ var DefaultVideoRoomOptions = &createRoomOptions{
 	RecordParticipantsOnConnect: false,
 	StatusCallback:              "",
 	StatusCallbackMethod:        http.MethodPost,
-	Type:                        Group,
+	Type:                        GroupSmall,
 	UniqueName:                  "",
 	VideoCodecs:                 []VideoCodecs{H264},
 }
@@ -155,7 +166,7 @@ func (twilio *Twilio) DefaultRoomOptions() *createRoomOptions {
 		RecordParticipantsOnConnect: false,
 		StatusCallback:              "",
 		StatusCallbackMethod:        http.MethodPost,
-		Type:                        Group,
+		Type:                        GroupSmall,
 		UniqueName:                  "",
 		VideoCodecs:                 []VideoCodecs{VP8},
 	}
@@ -192,6 +203,62 @@ func (twilio *Twilio) CreateVideoRoom(options *createRoomOptions) (videoResponse
 	videoResponse = new(VideoResponse)
 	err = json.Unmarshal(responseBody, videoResponse)
 	return videoResponse, exception, err
+}
+
+func (twilio *Twilio) GetRecordingsByRoom(sid string) ([]VideoRecording, *Exception, error) {
+	twilioUrl := twilio.VideoUrl + fmt.Sprintf("/v1/Rooms/%v/Recordings", sid)
+
+	res, err := twilio.get(twilioUrl)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer res.Body.Close()
+
+	responseBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		exception := new(Exception)
+		err = json.Unmarshal(responseBody, exception)
+
+		// We aren't checking the error because we don't actually care.
+		// It's going to be passed to the client either way.
+		return nil, exception, err
+	}
+
+	recordings := new(GetVideoRecordingsByRoom)
+	err = json.Unmarshal(responseBody, recordings)
+	return recordings.Recordings, nil, err
+}
+
+func (twilio *Twilio) DeleteRecording(sid string) (*Exception, error) {
+	twilioUrl := twilio.VideoUrl + fmt.Sprintf("/v1/Recordings/%v", sid)
+
+	res, err := twilio.delete(twilioUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	responseBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusNoContent {
+		exception := new(Exception)
+		err = json.Unmarshal(responseBody, exception)
+
+		// We aren't checking the error because we don't actually care.
+		// It's going to be passed to the client either way.
+		return exception, err
+	}
+
+	return nil, nil
 }
 
 func (twilio *Twilio) GetComposition(sid string) (*VideoComposition, *Exception, error) {
