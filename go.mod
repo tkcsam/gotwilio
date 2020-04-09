@@ -1,4 +1,4 @@
-module github.com/sfreiberg/gotwilio
+module github.com/sambengtson/gotwilio
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
