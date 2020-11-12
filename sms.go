@@ -184,3 +184,29 @@ func initFormValues(to, body string, mediaUrl []string, statusCallback, applicat
 
 	return formValues
 }
+
+func (twilio *Twilio) DeleteMediaResource(url string) (*Exception, error) {
+
+	res, err := twilio.delete(url)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	responseBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusNoContent {
+		exception := new(Exception)
+		err = json.Unmarshal(responseBody, exception)
+
+		// We aren't checking the error because we don't actually care.
+		// It's going to be passed to the client either way.
+		return exception, err
+	}
+
+	return nil, nil
+}
