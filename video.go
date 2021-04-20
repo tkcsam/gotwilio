@@ -330,6 +330,32 @@ func (twilio *Twilio) DeleteComposition(sid string) (ex *Exception, err error) {
 	return nil, nil
 }
 
+func (twilio *Twilio) RemoveParticipantFromRoom(participantUid, roomName string) (ex *Exception, err error) {
+	twilioUrl := twilio.VideoUrl + fmt.Sprintf("/v1/Rooms/%v/Participants/%v", roomName, participantUid)
+	formValues := url.Values{}
+	formValues.Set("Status", "disconnected")
+
+	res, err := twilio.post(formValues, twilioUrl)
+	if err != nil {
+		return ex, err
+	}
+
+	defer res.Body.Close()
+
+	responseBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return ex, err
+	}
+
+	if res.StatusCode != http.StatusAccepted {
+		ex = new(Exception)
+		err = json.Unmarshal(responseBody, ex)
+		return ex, err
+	}
+
+	return ex, err
+}
+
 func (twilio *Twilio) CreateVideoRoomComposition(options *VideoCompositionOptions) (resp *VideoCompositionResponse, exception *Exception, err error) {
 	twilioUrl := twilio.VideoUrl + "/v1/Compositions"
 
