@@ -2,17 +2,22 @@ package gotwilio
 
 import (
 	"fmt"
-	"net/url"
-
 	"github.com/gorilla/schema"
+	"net/url"
 )
 
 // LookupReq Go-representation of Twilio REST API's lookup request.
 // https://www.twilio.com/docs/api/rest/lookups#lookups-query-parameters
 type LookupReq struct {
 	PhoneNumber string
-	Type        string
+	Type        []string
 	CountryCode string
+}
+
+func NewLookup() LookupReq {
+	var tmp LookupReq
+	tmp.Type = make([]string, 0)
+	return tmp
 }
 
 // Lookup Go-representation of Twilio REST API's lookup.
@@ -29,6 +34,7 @@ type Lookup struct {
 	NationalFormat string `json:"national_format"`
 	PhoneNumber    string `json:"phone_number"`
 	URL            string `json:"url"`
+	CallerName     string `json:"caller_name"`
 }
 
 // SubmitLookup sends a lookup request populating form fields only if they

@@ -16,7 +16,10 @@ func TestLookup(t *testing.T) {
 
 	twilio := NewTwilioClient("", "")
 	twilio.LookupURL = srv.URL
-	req := &LookupReq{PhoneNumber: "+11231231234"}
+	req := &LookupReq{
+		PhoneNumber: "+11231231234",
+		Type:        []string{"carrier", "caller-name"},
+	}
 	lookup, err := twilio.SubmitLookup(*req)
 	if err != nil {
 		t.Fatalf("Failed: %s", err.Error())
