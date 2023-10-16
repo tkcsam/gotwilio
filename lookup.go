@@ -30,11 +30,16 @@ type Lookup struct {
 		Name              string `json:"name"`
 		Type              string `json:"type"`
 	} `json:"carrier"`
-	CountryCode    string `json:"country_code"`
-	NationalFormat string `json:"national_format"`
-	PhoneNumber    string `json:"phone_number"`
-	URL            string `json:"url"`
-	CallerName     string `json:"caller_name"`
+	CountryCode    string      `json:"country_code"`
+	NationalFormat string      `json:"national_format"`
+	PhoneNumber    string      `json:"phone_number"`
+	URL            string      `json:"url"`
+	CallerName     *CallerName `json:"caller_name"`
+}
+
+type CallerName struct {
+	CallerName string `json:"caller_name"`
+	Type       string `json:"caller_type"`
 }
 
 // SubmitLookup sends a lookup request populating form fields only if they
