@@ -147,7 +147,7 @@ func (twilio *Twilio) sendMessage(formValues url.Values) (smsResponse *SmsRespon
 		return smsResponse, exception, err
 	}
 
-	if res.StatusCode != http.StatusCreated {
+	if res.StatusCode > 299 {
 		exception = new(Exception)
 		err = json.Unmarshal(responseBody, exception)
 
