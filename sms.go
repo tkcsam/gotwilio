@@ -89,6 +89,10 @@ func (twilio *Twilio) GetSMS(sid string) (smsResponse *SmsResponse, exception *E
 		return smsResponse, exception, err
 	}
 
+	if res.StatusCode == http.StatusNotFound {
+		return nil, nil, nil
+	}
+
 	if res.StatusCode != http.StatusOK {
 		exception = new(Exception)
 		err = json.Unmarshal(responseBody, exception)
