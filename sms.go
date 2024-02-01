@@ -96,6 +96,9 @@ func (twilio *Twilio) GetSMS(sid string) (smsResponse *SmsResponse, exception *E
 	if res.StatusCode != http.StatusOK {
 		exception = new(Exception)
 		err = json.Unmarshal(responseBody, exception)
+		if len(exception.Message) == 0 {
+			exception.Message = string(responseBody)
+		}
 
 		// We aren't checking the error because we don't actually care.
 		// It's going to be passed to the client either way.
